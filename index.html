@@ -98,7 +98,7 @@
         await db.collection('users').doc(uid).set({
           uid, name, email, phone, yob, nationality,
           role: 'user',
-          status: 'unverified',   // must be activated by admin
+          status: 'unverified',
           skills: [],
           purchasedTools: [],
           totalEarnings: 0,
@@ -106,7 +106,10 @@
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         alert('Account created! Please wait for admin approval before you can apply for jobs.');
-        window.location.href = 'user_dashboard.html';
+        // Small delay to ensure Firestore document is readable
+        setTimeout(() => {
+          window.location.href = 'user_dashboard.html';
+        }, 1000);
       } catch (err) {
         alert(err.message);
       }
