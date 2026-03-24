@@ -1,47 +1,18 @@
+<!-- admin_dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartHustle AI – Admin Dashboard</title>
+  <title>SmartHustle AI - Admin Dashboard</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-  <style>
-    body { background: #0a0e1a; font-family: 'DM Sans', sans-serif; color: #ccd6f6; }
-    .bg-surface { background: #131829; }
-    .text-accent { color: #00e5a0; }
-    .bg-accent { background: #00e5a0; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    th { background: #1a1f2e; }
-    .status-badge { padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; }
-    .status-active { background: #00e5a0; color: #0a0e1a; }
-    .status-unverified { background: #f59e0b; color: #0a0e1a; }
-  </style>
-</head>
-<body>
-  <nav class="fixed top-0 left-0 right-0 z-50 bg-midnight/90 backdrop-blur-md border-b border-white/5">
-    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-2"><div class="w-8 h-8 rounded-lg bg-accent flex items-center justify-center"><i data-lucide="zap" style="width:18px;height:18px;color:#0a0e1a;"></i></div><span class="font-heading font-bold text-lg">SmartHustle Admin</span></div>
-      <button onclick="logout()" class="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition">Logout</button>
-    </div>
-  </nav>
-  <div class="pt-20 max-w-6xl mx-auto px-4 pb-8">
-    <h1 class="font-heading text-2xl font-bold mb-6">User Management</h1>
-    <div class="bg-surface rounded-xl overflow-hidden border border-white/10">
-      <table class="w-full">
-        <thead>
-          <tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Role</th><th>Actions</th></tr>
-        </thead>
-        <tbody id="usersTableBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <script>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js";
+    
     const firebaseConfig = {
       apiKey: "AIzaSyDm-PeCeRdlx6TKPEvKNdT93lMqb5D5O20",
       authDomain: "urbanpay-c5aee.firebaseapp.com",
@@ -51,64 +22,207 @@
       appId: "1:648155825006:web:16d6ea4dfab808920b777f",
       measurementId: "G-CTKZN6VHPS"
     };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-
-    auth.onAuthStateChanged(async (user) => {
-      if (!user) {
-        window.location.href = 'registration.html';
-        return;
-      }
-      const doc = await db.collection('users').doc(user.uid).get();
-      if (!doc.exists || doc.data().role !== 'admin') {
-        await auth.signOut();
-        window.location.href = 'registration.html';
-        return;
-      }
-      loadUsers();
-    });
-
+    
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    
+    let currentUser = null;
+    let currentTab = 'users';
+    
+    async function checkAuth() {
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists() && userDoc.data().role === 'admin') {
+            currentUser = user;
+            document.getElementById('adminName').textContent = userDoc.data().name;
+            loadUsers();
+            loadJobs();
+            loadTools();
+          } else {
+            window.location.href = "registration.html";
+          }
+        } else {
+          window.location.href = "registration.html";
+        }
+      });
+    }
+    
     async function loadUsers() {
-      const snapshot = await db.collection('users').orderBy('createdAt', 'desc').get();
-      const tbody = document.getElementById('usersTableBody');
-      tbody.innerHTML = '';
-      snapshot.forEach(doc => {
-        const u = doc.data();
-        const statusClass = u.status === 'active' ? 'status-active' : 'status-unverified';
-        const statusText = u.status === 'active' ? 'Active' : 'Unverified';
-        tbody.innerHTML += `
-          <tr>
-            <td>${u.name || '-'}</td>
-            <td>${u.email}</td>
-            <td>${u.phone || '-'}</td>
-            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-            <td>${u.role || 'user'}</td>
-            <td>
-              <button onclick="toggleUserStatus('${doc.id}', '${u.status}')" class="px-3 py-1 rounded-lg bg-accent/10 text-accent text-xs hover:bg-accent/20 transition">
-                ${u.status === 'active' ? 'Deactivate' : 'Activate'}
-              </button>
-              ${u.role !== 'admin' ? `<button onclick="makeAdmin('${doc.id}')" class="ml-2 px-3 py-1 rounded-lg bg-blue-500/10 text-blue-400 text-xs hover:bg-blue-500/20 transition">Make Admin</button>` : ''}
-            </td>
-          </tr>
+      const usersList = document.getElementById('usersList');
+      usersList.innerHTML = '<div class="text-slate">Loading...</div>';
+      const querySnapshot = await getDocs(collection(db, "users"));
+      usersList.innerHTML = '';
+      querySnapshot.forEach((docSnap) => {
+        const user = docSnap.data();
+        usersList.innerHTML += `
+          <div class="bg-surface rounded-xl p-4 border border-white/5 flex justify-between items-center">
+            <div><p class="font-medium">${user.name}</p><p class="text-slate text-xs">${user.email} | ${user.role}</p></div>
+            <div class="flex gap-2"><button onclick="toggleUserRole('${docSnap.id}', '${user.role}')" class="px-3 py-1 rounded-lg bg-accent/10 text-accent text-xs">${user.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}</button><button onclick="deleteUser('${docSnap.id}')" class="px-3 py-1 rounded-lg bg-red-500/10 text-red-400 text-xs">Delete</button></div>
+          </div>
         `;
       });
-      lucide.createIcons();
     }
-
-    window.toggleUserStatus = async (uid, currentStatus) => {
-      const newStatus = currentStatus === 'active' ? 'unverified' : 'active';
-      await db.collection('users').doc(uid).update({ status: newStatus });
+    
+    async function loadJobs() {
+      const jobsList = document.getElementById('jobsList');
+      jobsList.innerHTML = '<div class="text-slate">Loading...</div>';
+      const querySnapshot = await getDocs(collection(db, "jobs"));
+      jobsList.innerHTML = '';
+      querySnapshot.forEach((docSnap) => {
+        const job = docSnap.data();
+        jobsList.innerHTML += `
+          <div class="bg-surface rounded-xl p-4 border border-white/5">
+            <div class="flex justify-between items-start"><h3 class="font-heading font-semibold">${job.title}</h3><span class="text-accent">KES ${job.budget}</span></div>
+            <p class="text-slate text-sm mt-1">${job.description}</p>
+            <p class="text-xs text-slate mt-2">Posted by: ${job.clientName} | Deadline: ${job.deadline}</p>
+            <div class="flex gap-2 mt-3"><button onclick="deleteJob('${docSnap.id}')" class="px-3 py-1 rounded-lg bg-red-500/10 text-red-400 text-xs">Delete</button></div>
+          </div>
+        `;
+      });
+    }
+    
+    async function loadTools() {
+      // Sample tools - you can also load from Firestore
+      const toolsList = document.getElementById('toolsList');
+      const tools = [
+        { id: 't1', name: 'Essay Generator', price: 500, cat: 'writing' },
+        { id: 't2', name: 'Proposal Generator', price: 800, cat: 'writing' },
+        { id: 't3', name: 'Blog Writer', price: 600, cat: 'writing' },
+        { id: 't4', name: 'Social Media Creator', price: 400, cat: 'content' },
+        { id: 't5', name: 'Video Script Writer', price: 700, cat: 'content' },
+        { id: 't6', name: 'Business Plan AI', price: 1200, cat: 'business' }
+      ];
+      toolsList.innerHTML = tools.map(tool => `
+        <div class="bg-surface rounded-xl p-4 border border-white/5">
+          <div class="flex justify-between items-start"><h3 class="font-heading font-semibold">${tool.name}</h3><span class="text-accent">KES ${tool.price}</span></div>
+          <p class="text-slate text-sm">Category: ${tool.cat}</p>
+          <div class="flex gap-2 mt-3"><button onclick="deleteTool('${tool.id}')" class="px-3 py-1 rounded-lg bg-red-500/10 text-red-400 text-xs">Delete</button></div>
+        </div>
+      `).join('');
+    }
+    
+    window.toggleUserRole = async (userId, currentRole) => {
+      const newRole = currentRole === 'admin' ? 'user' : 'admin';
+      await updateDoc(doc(db, "users", userId), { role: newRole });
+      showToast(`User role updated to ${newRole}`);
       loadUsers();
     };
-
-    window.makeAdmin = async (uid) => {
-      await db.collection('users').doc(uid).update({ role: 'admin' });
-      loadUsers();
+    
+    window.deleteUser = async (userId) => {
+      if (confirm("Are you sure? This will delete the user account.")) {
+        await deleteDoc(doc(db, "users", userId));
+        showToast("User deleted");
+        loadUsers();
+      }
     };
-
-    function logout() { auth.signOut(); }
-    window.logout = logout;
+    
+    window.deleteJob = async (jobId) => {
+      if (confirm("Delete this job?")) {
+        await deleteDoc(doc(db, "jobs", jobId));
+        showToast("Job deleted");
+        loadJobs();
+      }
+    };
+    
+    window.deleteTool = async (toolId) => {
+      if (confirm("Delete this tool?")) {
+        // In production, you would delete from Firestore tools collection
+        showToast("Tool deleted (demo)");
+        loadTools();
+      }
+    };
+    
+    window.showAddTool = () => {
+      document.getElementById('addToolModal').classList.remove('hidden');
+    };
+    
+    window.closeAddTool = () => {
+      document.getElementById('addToolModal').classList.add('hidden');
+    };
+    
+    window.addTool = async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('tool-name').value;
+      const price = parseInt(document.getElementById('tool-price').value);
+      const cat = document.getElementById('tool-cat').value;
+      const desc = document.getElementById('tool-desc').value;
+      // Add to Firestore (you need a tools collection)
+      await addDoc(collection(db, "tools"), { name, price, category: cat, description: desc, createdAt: new Date().toISOString() });
+      showToast("Tool added successfully!");
+      closeAddTool();
+      loadTools();
+    };
+    
+    window.setAdminTab = (tab) => {
+      currentTab = tab;
+      document.querySelectorAll('.admin-content').forEach(c => c.classList.add('hidden'));
+      document.getElementById(`admin-${tab}`).classList.remove('hidden');
+      if (tab === 'users') loadUsers();
+      if (tab === 'jobs') loadJobs();
+      if (tab === 'tools') loadTools();
+    };
+    
+    window.logout = async () => {
+      await signOut(auth);
+      window.location.href = "registration.html";
+    };
+    
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      toastMsg.textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+    
+    checkAuth();
+    window.setAdminTab('users');
   </script>
+  <style>
+    body { font-family: 'DM Sans', sans-serif; background: #0a0e1a; color: #ccd6f6; }
+    .bg-grid { background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0); background-size: 40px 40px; }
+    .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.7); z-index: 100; display:flex; align-items:center; justify-content:center; }
+  </style>
+</head>
+<body class="bg-midnight text-light bg-grid">
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-midnight/90 backdrop-blur-md border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2"><div class="w-8 h-8 rounded-lg bg-accent flex items-center justify-center"><i data-lucide="zap" style="width:18px;height:18px;color:#0a0e1a;"></i></div><span class="font-heading font-bold text-lg">SmartHustle Admin</span></div>
+      <div class="flex items-center gap-4"><span id="adminName" class="text-sm text-light"></span><button onclick="logout()" class="px-4 py-2 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition">Logout</button></div>
+    </div>
+  </nav>
+  
+  <div class="flex h-[calc(100%-4rem)] pt-16">
+    <aside class="w-56 bg-surface border-r border-white/5 p-4 gap-1 shrink-0">
+      <button onclick="setAdminTab('users')" class="w-full text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate"><i data-lucide="users" style="width:16px;height:16px;"></i> Users</button>
+      <button onclick="setAdminTab('jobs')" class="w-full text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate"><i data-lucide="briefcase" style="width:16px;height:16px;"></i> Jobs</button>
+      <button onclick="setAdminTab('tools')" class="w-full text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate"><i data-lucide="wrench" style="width:16px;height:16px;"></i> Tools</button>
+      <div class="mt-auto pt-4 border-t border-white/5"><button onclick="showAddTool()" class="w-full px-3 py-2.5 rounded-lg bg-accent/10 text-accent text-sm font-medium hover:bg-accent/20 transition flex items-center gap-2"><i data-lucide="plus" style="width:16px;height:16px;"></i> Add Tool</button></div>
+    </aside>
+    
+    <div class="flex-1 p-8 overflow-auto">
+      <div id="admin-users" class="admin-content"><h2 class="font-heading text-xl font-bold mb-6">Manage Users</h2><div id="usersList" class="space-y-3"></div></div>
+      <div id="admin-jobs" class="admin-content hidden"><h2 class="font-heading text-xl font-bold mb-6">Manage Jobs</h2><div id="jobsList" class="space-y-4"></div></div>
+      <div id="admin-tools" class="admin-content hidden"><h2 class="font-heading text-xl font-bold mb-6">Manage Tools</h2><div id="toolsList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"></div></div>
+    </div>
+  </div>
+  
+  <div id="addToolModal" class="modal-overlay hidden" onclick="if(event.target===this)closeAddTool()">
+    <div class="bg-surface rounded-2xl p-6 max-w-md w-full mx-4 border border-white/10">
+      <div class="flex justify-between items-start mb-4"><h3 class="font-heading text-lg font-bold">Add New Tool</h3><button onclick="closeAddTool()" class="text-slate hover:text-light"><i data-lucide="x" style="width:20px;height:20px;"></i></button></div>
+      <form onsubmit="addTool(event)" class="space-y-4">
+        <div><label class="block text-sm font-medium mb-1">Tool Name</label><input id="tool-name" type="text" required class="w-full px-4 py-3 rounded-xl bg-midnight border border-white/10 text-light"></div>
+        <div><label class="block text-sm font-medium mb-1">Price (KES)</label><input id="tool-price" type="number" required class="w-full px-4 py-3 rounded-xl bg-midnight border border-white/10 text-light"></div>
+        <div><label class="block text-sm font-medium mb-1">Category</label><select id="tool-cat" required class="w-full px-4 py-3 rounded-xl bg-midnight border border-white/10 text-light"><option value="writing">Writing</option><option value="content">Content</option><option value="business">Business</option></select></div>
+        <div><label class="block text-sm font-medium mb-1">Description</label><textarea id="tool-desc" rows="2" required class="w-full px-4 py-3 rounded-xl bg-midnight border border-white/10 text-light"></textarea></div>
+        <button type="submit" class="w-full py-3 rounded-xl bg-accent text-midnight font-bold hover:bg-accentDim transition">Add Tool</button>
+      </form>
+    </div>
+  </div>
+  
+  <div id="toast" class="fixed top-20 right-4 z-50 hidden"><div class="bg-surface border border-accent/30 rounded-xl px-5 py-3 shadow-lg flex items-center gap-3"><i data-lucide="check-circle" style="width:18px;height:18px;color:#00e5a0;"></i><span id="toastMsg" class="text-sm"></span></div></div>
+  <script>lucide.createIcons();</script>
 </body>
 </html>

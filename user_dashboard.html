@@ -1,95 +1,18 @@
+<!-- user_dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartHustle AI – User Dashboard</title>
+  <title>SmartHustle AI - User Dashboard</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-  <style>
-    body { background: #0a0e1a; font-family: 'DM Sans', sans-serif; color: #ccd6f6; }
-    .bg-surface { background: #131829; }
-    .text-accent { color: #00e5a0; }
-    .bg-accent { background: #00e5a0; }
-    .border-accent { border-color: #00e5a0; }
-    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,229,160,0.12); }
-    .screen { display: none; }
-    .screen.active { display: block; }
-    .status-badge { padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; }
-    .status-active { background: #00e5a0; color: #0a0e1a; }
-    .status-unverified { background: #f59e0b; color: #0a0e1a; }
-  </style>
-</head>
-<body>
-  <div class="app-wrapper bg-grid" id="app">
-    <nav class="fixed top-0 left-0 right-0 z-50 bg-midnight/90 backdrop-blur-md border-b border-white/5">
-      <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        <div class="flex items-center gap-2 cursor-pointer" onclick="navigateTo('landing')">
-          <div class="w-8 h-8 rounded-lg bg-accent flex items-center justify-center"><i data-lucide="zap" style="width:18px;height:18px;color:#0a0e1a;"></i></div>
-          <span class="font-heading font-bold text-lg">SmartHustle</span>
-        </div>
-        <div class="flex gap-4">
-          <button onclick="logout()" class="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition">Logout</button>
-        </div>
-      </div>
-    </nav>
-
-    <div class="flex h-[calc(100%-4rem)] pt-16">
-      <aside class="hidden md:flex flex-col w-56 bg-surface border-r border-white/5 p-4 gap-1 shrink-0">
-        <button onclick="setDashTab('overview')" class="dash-tab text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate" data-tab="overview"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> Overview</button>
-        <button onclick="setDashTab('jobs')" class="dash-tab text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate" data-tab="jobs"><i data-lucide="briefcase" style="width:16px;height:16px;"></i> Available Jobs</button>
-        <button onclick="setDashTab('tasks')" class="dash-tab text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate" data-tab="tasks"><i data-lucide="clock" style="width:16px;height:16px;"></i> Quick Tasks</button>
-        <button onclick="setDashTab('mytools')" class="dash-tab text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate" data-tab="mytools"><i data-lucide="wrench" style="width:16px;height:16px;"></i> My Tools</button>
-        <button onclick="setDashTab('earnings')" class="dash-tab text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate" data-tab="earnings"><i data-lucide="wallet" style="width:16px;height:16px;"></i> Earnings</button>
-        <div class="mt-auto pt-4 border-t border-white/5">
-          <button onclick="window.location.href='tools.html'" class="w-full px-3 py-2.5 rounded-lg bg-accent/10 text-accent text-sm font-medium hover:bg-accent/20 transition flex items-center gap-2"><i data-lucide="sparkles"></i> Buy Tools 🔥</button>
-        </div>
-      </aside>
-      <div class="flex-1 p-4 md:p-8 overflow-auto">
-        <div id="unverifiedBanner" class="mb-6 bg-yellow-500/20 border border-yellow-500 rounded-xl p-4 text-yellow-300 text-sm hidden">
-          <i data-lucide="alert-triangle" class="inline mr-2 w-4 h-4"></i> Your account is pending verification. You cannot apply for jobs until an admin activates your account.
-        </div>
-
-        <div id="dash-overview" class="dash-content">
-          <h2 class="font-heading text-xl font-bold mb-6">Welcome back, <span id="userName"></span>! 👋</h2>
-          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div class="bg-surface rounded-xl p-5 border border-white/5"><p class="text-slate text-xs mb-1">Total Earnings</p><p class="font-heading text-2xl font-bold text-accent" id="totalEarnings">KES 0</p></div>
-            <div class="bg-surface rounded-xl p-5 border border-white/5"><p class="text-slate text-xs mb-1">Active Jobs</p><p class="font-heading text-2xl font-bold" id="activeJobs">0</p></div>
-            <div class="bg-surface rounded-xl p-5 border border-white/5"><p class="text-slate text-xs mb-1">Tools Owned</p><p class="font-heading text-2xl font-bold" id="toolsOwned">0</p></div>
-            <div class="bg-surface rounded-xl p-5 border border-white/5"><p class="text-slate text-xs mb-1">Rating</p><p class="font-heading text-2xl font-bold text-yellow-400" id="rating">—</p></div>
-          </div>
-          <div class="bg-surface rounded-xl p-6 border border-accent/20 glow"><div class="flex items-center gap-3 mb-2"><i data-lucide="sparkles"></i><h3 class="font-heading font-semibold">Buy Tools to Earn Faster 🔥</h3></div><p class="text-slate text-sm mb-4">Unlock AI tools like the Proposal Generator to win more jobs.</p><button onclick="window.location.href='tools.html'" class="px-5 py-2 rounded-lg bg-accent text-midnight font-semibold text-sm hover:bg-accentDim transition">Browse Tools</button></div>
-        </div>
-
-        <div id="dash-jobs" class="dash-content hidden">
-          <h2 class="font-heading text-xl font-bold mb-6">Available Jobs</h2>
-          <div id="dashJobsList" class="space-y-4"></div>
-        </div>
-
-        <div id="dash-tasks" class="dash-content hidden">
-          <h2 class="font-heading text-xl font-bold mb-6">Quick Tasks</h2>
-          <div id="dashTasksList" class="space-y-3"></div>
-        </div>
-
-        <div id="dash-mytools" class="dash-content hidden">
-          <h2 class="font-heading text-xl font-bold mb-6">My Tools</h2>
-          <p class="text-slate text-sm" id="myToolsMsg">You haven't purchased any tools yet. <a href="#" onclick="window.location.href='tools.html'" class="text-accent hover:underline">Browse the marketplace</a>.</p>
-          <div id="myToolsList" class="grid sm:grid-cols-2 gap-4 mt-4"></div>
-        </div>
-
-        <div id="dash-earnings" class="dash-content hidden">
-          <h2 class="font-heading text-xl font-bold mb-6">Earnings & Wallet</h2>
-          <div class="bg-surface rounded-xl p-6 border border-white/5 mb-6"><p class="text-slate text-xs mb-1">Available Balance</p><p class="font-heading text-3xl font-bold text-accent" id="balance">KES 0.00</p><button class="mt-4 px-5 py-2 rounded-lg bg-accent/10 text-accent font-medium text-sm hover:bg-accent/20 transition">Withdraw via M-Pesa</button></div>
-          <p class="text-slate text-sm">Complete jobs to start earning. Your payments are secured in escrow until work is approved.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, query, where, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js";
+    
     const firebaseConfig = {
       apiKey: "AIzaSyDm-PeCeRdlx6TKPEvKNdT93lMqb5D5O20",
       authDomain: "urbanpay-c5aee.firebaseapp.com",
@@ -99,170 +22,327 @@
       appId: "1:648155825006:web:16d6ea4dfab808920b777f",
       measurementId: "G-CTKZN6VHPS"
     };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-
-    let currentUserData = null;
-    let userStatus = null;
-
-    auth.onAuthStateChanged(async (user) => {
-      if (!user) {
-        window.location.href = 'registration.html';
-        return;
-      }
-
-      let retries = 0;
-      const maxRetries = 3;
-      let userDoc = null;
-
-      while (retries < maxRetries) {
-        const doc = await db.collection('users').doc(user.uid).get();
-        if (doc.exists) {
-          userDoc = doc;
-          break;
+    
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    
+    let currentUser = null;
+    let userData = null;
+    let currentTab = 'overview';
+    
+    // Sample data for jobs and tasks (stored in Firestore)
+    const sampleJobs = [
+      { id: 'j1', title: 'Write 10 SEO Blog Posts', description: 'Need a writer for tech blog posts, 1000 words each.', budget: 8000, deadline: '2025-08-01', client: 'TechCorp', tags: ['Writing', 'SEO'] },
+      { id: 'j2', title: 'Design Social Media Graphics', description: 'Create 20 Instagram post templates for a fashion brand.', budget: 5000, deadline: '2025-07-20', client: 'StyleHub', tags: ['Design', 'Social Media'] },
+      { id: 'j3', title: 'Translate Documents EN→SW', description: 'Translate 50 pages of business documents to Swahili.', budget: 12000, deadline: '2025-07-25', client: 'NGO Africa', tags: ['Translation'] }
+    ];
+    
+    const quickTasks = [
+      { id: 'qt1', title: 'Rewrite a product description', pay: 150, time: '15 min' },
+      { id: 'qt2', title: 'Proofread a 2-page document', pay: 100, time: '10 min' },
+      { id: 'qt3', title: 'Write 5 social media captions', pay: 250, time: '20 min' }
+    ];
+    
+    const tools = [
+      { id: 't1', name: 'Essay Generator', cat: 'writing', desc: 'Generate well-structured essays on any topic using AI.', demo: 'Sample: "The impact of AI on modern education has been profound..."', price: 500, icon: 'file-text', color: '#00e5a0' },
+      { id: 't2', name: 'Proposal Generator', cat: 'writing', desc: 'Create winning freelance proposals that land clients.', demo: 'Sample: "Dear [Client], I am excited to help you with..."', price: 800, icon: 'send', color: '#3b82f6' },
+      { id: 't3', name: 'Blog Writer', cat: 'writing', desc: 'SEO-optimized blog posts generated in seconds.', demo: 'Sample: "5 Ways AI is Transforming Freelancing in 2025..."', price: 600, icon: 'book-open', color: '#a78bfa' },
+      { id: 't4', name: 'Social Media Creator', cat: 'content', desc: 'Create engaging social media content and captions.', demo: 'Sample: "🚀 Ready to level up your hustle? Here are 3 tips..."', price: 400, icon: 'instagram', color: '#ff6b6b' },
+      { id: 't5', name: 'Video Script Writer', cat: 'content', desc: 'Professional video scripts for YouTube and TikTok.', demo: 'Sample: "Hey everyone! Today we are diving into..."', price: 700, icon: 'video', color: '#fbbf24' },
+      { id: 't6', name: 'Business Plan AI', cat: 'business', desc: 'Complete business plans with financial projections.', demo: 'Sample: "Executive Summary: SmartHustle is a platform..."', price: 1200, icon: 'bar-chart-2', color: '#a78bfa' }
+    ];
+    
+    async function checkAuth() {
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          currentUser = user;
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            userData = userDoc.data();
+            if (userData.role === 'admin') {
+              window.location.href = "admin_dashboard.html";
+              return;
+            }
+            document.getElementById('userName').textContent = userData.name || 'User';
+            document.getElementById('userEmail').textContent = user.email;
+            renderDashboard();
+          } else {
+            window.location.href = "registration.html";
+          }
+        } else {
+          window.location.href = "registration.html";
         }
-        retries++;
-        console.log(`User document not found, retry ${retries}/${maxRetries}`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      if (!userDoc) {
-        console.error('User document still missing after retries');
-        await auth.signOut();
-        window.location.href = 'registration.html';
-        return;
-      }
-
-      currentUserData = userDoc.data();
-      userStatus = currentUserData.status;
-      if (currentUserData.role === 'admin') {
-        window.location.href = 'admin_dashboard.html';
-        return;
-      }
-      if (userStatus !== 'active') {
-        document.getElementById('unverifiedBanner').classList.remove('hidden');
-      }
-      document.getElementById('userName').innerText = currentUserData.name || 'User';
-      renderDashboard();
-    });
-
-    async function renderDashboard() {
-      await renderStats();
-      await renderJobs();
-      renderTasks();
-      renderMyTools();
-      lucide.createIcons();
-    }
-
-    async function renderStats() {
-      document.getElementById('totalEarnings').innerText = `KES ${currentUserData.totalEarnings || 0}`;
-      const appsSnap = await db.collection('applications').where('freelancerId', '==', auth.currentUser.uid).where('status', '==', 'accepted').get();
-      document.getElementById('activeJobs').innerText = appsSnap.size;
-      document.getElementById('toolsOwned').innerText = (currentUserData.purchasedTools || []).length;
-      document.getElementById('rating').innerText = currentUserData.rating || '—';
-      document.getElementById('balance').innerText = `KES ${currentUserData.totalEarnings || 0}`;
-    }
-
-    async function renderJobs() {
-      const container = document.getElementById('dashJobsList');
-      const jobsSnap = await db.collection('jobs').orderBy('createdAt', 'desc').limit(5).get();
-      container.innerHTML = '';
-      jobsSnap.forEach(doc => {
-        const job = doc.data();
-        const applyDisabled = userStatus !== 'active' ? 'disabled' : '';
-        container.innerHTML += `
-          <div class="bg-surface rounded-xl p-5 border border-white/5 card-hover">
-            <div class="flex justify-between items-start mb-2"><h4 class="font-heading font-semibold">${job.title}</h4><span class="text-accent font-bold text-sm">KES ${job.budget.toLocaleString()}</span></div>
-            <p class="text-slate text-sm mb-3">${job.desc}</p>
-            <div class="flex flex-wrap gap-2">${(job.tags||[]).map(t=>`<span class="tag bg-white/5 text-slate">${t}</span>`).join('')}</div>
-            <button onclick="openApplyJob('${doc.id}')" ${applyDisabled} class="mt-3 px-4 py-2 rounded-lg bg-accent/10 text-accent text-sm font-medium hover:bg-accent/20 transition ${applyDisabled ? 'opacity-50 cursor-not-allowed' : ''}">Apply</button>
-          </div>
-        `;
       });
-      lucide.createIcons();
     }
-
-    function renderTasks() {
-      const tasks = [
-        {title:'Rewrite a product description',pay:150,time:'15 min'},
-        {title:'Proofread a 2-page document',pay:100,time:'10 min'},
-        {title:'Write 5 social media captions',pay:250,time:'20 min'},
-        {title:'Summarize a 10-page report',pay:200,time:'15 min'}
-      ];
-      document.getElementById('dashTasksList').innerHTML = tasks.map(t => `
+    
+    async function renderDashboard() {
+      // Update stats
+      document.getElementById('totalEarnings').textContent = `KES ${userData.earnings || 0}`;
+      document.getElementById('activeJobs').textContent = '0'; // TODO: implement
+      document.getElementById('toolsOwned').textContent = (userData.purchasedTools || []).length;
+      document.getElementById('rating').textContent = '—';
+      
+      renderJobs();
+      renderTasks();
+      renderTools('all');
+      renderMyTools();
+    }
+    
+    async function renderJobs() {
+      const jobsList = document.getElementById('jobsList');
+      if (!jobsList) return;
+      jobsList.innerHTML = sampleJobs.map(job => `
+        <div class="bg-surface rounded-xl p-5 border border-white/5 card-hover">
+          <div class="flex justify-between items-start mb-2"><h4 class="font-heading font-semibold">${job.title}</h4><span class="text-accent font-bold text-sm">KES ${job.budget.toLocaleString()}</span></div>
+          <p class="text-slate text-sm mb-3">${job.description}</p>
+          <div class="flex flex-wrap gap-2">${job.tags.map(t=>`<span class="tag bg-white/5 text-slate">${t}</span>`).join('')}</div>
+          <button onclick="openApplyJob('${job.id}')" class="mt-3 px-4 py-2 rounded-lg bg-accent/10 text-accent text-sm font-medium hover:bg-accent/20 transition">Apply</button>
+        </div>
+      `).join('');
+    }
+    
+    async function renderTasks() {
+      const tasksList = document.getElementById('tasksList');
+      if (!tasksList) return;
+      tasksList.innerHTML = quickTasks.map(task => `
         <div class="bg-surface rounded-xl p-4 border border-white/5 flex justify-between items-center card-hover">
-          <div><p class="font-medium text-sm">${t.title}</p><p class="text-slate text-xs mt-1"><i data-lucide="clock" style="width:12px;height:12px;"></i> ${t.time}</p></div>
-          <div class="text-right"><p class="text-accent font-bold text-sm">KES ${t.pay}</p><button onclick="completeQuickTask('${t.title}', ${t.pay})" class="mt-1 px-3 py-1 rounded-lg bg-accent/10 text-accent text-xs font-medium hover:bg-accent/20 transition">Complete</button></div>
+          <div><p class="font-medium text-sm">${task.title}</p><p class="text-slate text-xs mt-1"><i data-lucide="clock" style="width:12px;height:12px;display:inline;"></i> ${task.time}</p></div>
+          <div class="text-right"><p class="text-accent font-bold text-sm">KES ${task.pay}</p><button onclick="startTask('${task.id}')" class="mt-1 px-3 py-1 rounded-lg bg-accent/10 text-accent text-xs font-medium hover:bg-accent/20 transition">Start</button></div>
         </div>
       `).join('');
       lucide.createIcons();
     }
-
-    async function completeQuickTask(title, pay) {
-      if (!auth.currentUser) return;
-      await db.collection('users').doc(auth.currentUser.uid).update({
-        totalEarnings: firebase.firestore.FieldValue.increment(pay)
-      });
-      await db.collection('taskCompletions').add({
-        userId: auth.currentUser.uid,
-        taskTitle: title,
-        amount: pay,
-        completedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      alert(`+KES ${pay} earned!`);
-      renderStats();
+    
+    async function renderTools(filter = 'all') {
+      const toolsGrid = document.getElementById('toolsGrid');
+      if (!toolsGrid) return;
+      const filtered = filter === 'all' ? tools : tools.filter(t => t.cat === filter);
+      toolsGrid.innerHTML = filtered.map(t => `
+        <div class="bg-surface rounded-xl p-5 border border-white/5 card-hover cursor-pointer" onclick="openToolModal('${t.id}')">
+          <div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:${t.color}15"><i data-lucide="${t.icon}" style="width:20px;height:20px;color:${t.color};"></i></div><span class="font-heading font-semibold">${t.name}</span></div>
+          <p class="text-slate text-sm mb-4">${t.desc}</p>
+          <div class="flex justify-between items-center"><span class="font-heading font-bold text-accent">KES ${t.price.toLocaleString()}</span>${(userData.purchasedTools || []).includes(t.id)?'<span class="tag bg-accent/10 text-accent">Owned</span>':'<span class="tag bg-white/5 text-slate">Preview</span>'}</div>
+        </div>
+      `).join('');
+      lucide.createIcons();
     }
-
+    
     async function renderMyTools() {
-      const list = document.getElementById('myToolsList');
+      const myToolsList = document.getElementById('myToolsList');
       const msg = document.getElementById('myToolsMsg');
-      const purchased = currentUserData.purchasedTools || [];
+      const purchased = userData.purchasedTools || [];
       if (purchased.length === 0) {
         msg.classList.remove('hidden');
-        list.innerHTML = '';
+        myToolsList.innerHTML = '';
         return;
       }
       msg.classList.add('hidden');
-      const toolsSnap = await db.collection('tools').where(firebase.firestore.FieldPath.documentId(), 'in', purchased).get();
-      list.innerHTML = '';
-      toolsSnap.forEach(doc => {
-        const t = doc.data();
-        list.innerHTML += `<div class="bg-surface rounded-xl p-5 border border-accent/20 glow"><div class="flex items-center gap-3 mb-2"><i data-lucide="${t.icon}" style="width:20px;height:20px;color:${t.color};"></i><span class="font-medium">${t.name}</span></div><p class="text-slate text-xs">${t.desc}</p><button class="mt-3 px-4 py-2 rounded-lg bg-accent text-midnight text-sm font-semibold hover:bg-accentDim transition">Use Tool</button></div>`;
-      });
+      myToolsList.innerHTML = tools.filter(t => purchased.includes(t.id)).map(t => `
+        <div class="bg-surface rounded-xl p-5 border border-accent/20 glow"><div class="flex items-center gap-3 mb-2"><i data-lucide="${t.icon}" style="width:20px;height:20px;color:${t.color};"></i><span class="font-medium">${t.name}</span></div><p class="text-slate text-xs">${t.desc}</p><button onclick="useTool('${t.id}')" class="mt-3 px-4 py-2 rounded-lg bg-accent text-midnight text-sm font-semibold hover:bg-accentDim transition">Use Tool</button></div>
+      `).join('');
       lucide.createIcons();
     }
-
-    window.openApplyJob = (jobId) => {
-      if (userStatus !== 'active') {
-        alert('Your account is not yet verified. Please contact admin.');
-        return;
-      }
-      const proposal = prompt('Write your proposal:');
-      const price = prompt('Your price (KES):');
-      if (proposal && price) {
-        db.collection('applications').add({
-          jobId: jobId,
-          freelancerId: auth.currentUser.uid,
-          freelancerName: currentUserData.name,
-          proposal: proposal,
-          price: parseInt(price),
-          status: 'pending',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => alert('Application submitted!'));
-      }
+    
+    window.openToolModal = (id) => {
+      const tool = tools.find(t => t.id === id);
+      document.getElementById('toolModalTitle').textContent = tool.name;
+      document.getElementById('toolModalDesc').textContent = tool.desc;
+      document.getElementById('toolModalDemoText').textContent = tool.demo;
+      document.getElementById('toolModalPrice').textContent = `KES ${tool.price.toLocaleString()}`;
+      document.getElementById('toolModalUnlock').textContent = (userData.purchasedTools || []).includes(id) ? 'Already Owned' : 'Unlock Tool';
+      document.getElementById('toolModalUnlock').disabled = (userData.purchasedTools || []).includes(id);
+      document.getElementById('toolModal').classList.remove('hidden');
+      window.currentToolId = id;
+      lucide.createIcons();
     };
-
-    function setDashTab(tab) {
+    
+    window.closeToolModal = () => {
+      document.getElementById('toolModal').classList.add('hidden');
+    };
+    
+    window.unlockTool = async () => {
+      const id = window.currentToolId;
+      if (!id || (userData.purchasedTools || []).includes(id)) return;
+      const tool = tools.find(t => t.id === id);
+      // In real app, handle payment here
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        purchasedTools: arrayUnion(id)
+      });
+      userData.purchasedTools.push(id);
+      showToast(`${tool.name} unlocked!`);
+      closeToolModal();
+      renderTools('all');
+      renderMyTools();
+    };
+    
+    window.openApplyJob = (jobId) => {
+      const job = sampleJobs.find(j => j.id === jobId);
+      document.getElementById('applyJobTitle').textContent = job.title;
+      document.getElementById('applyJobModal').classList.remove('hidden');
+      window.currentApplyJob = job;
+    };
+    
+    window.closeApplyJob = () => {
+      document.getElementById('applyJobModal').classList.add('hidden');
+    };
+    
+    window.submitApplication = async (e) => {
+      e.preventDefault();
+      const proposal = document.getElementById('a-proposal').value;
+      const price = document.getElementById('a-price').value;
+      // Save application to Firestore
+      await addDoc(collection(db, "applications"), {
+        jobId: window.currentApplyJob.id,
+        jobTitle: window.currentApplyJob.title,
+        freelancerId: currentUser.uid,
+        freelancerName: userData.name,
+        proposal: proposal,
+        price: parseInt(price),
+        status: "pending",
+        createdAt: new Date().toISOString()
+      });
+      closeApplyJob();
+      showToast("Application submitted!");
+      e.target.reset();
+    };
+    
+    window.startTask = async (taskId) => {
+      const task = quickTasks.find(t => t.id === taskId);
+      showToast(`Started ${task.title}. Complete and submit for review.`);
+      // In real app, track task progress
+    };
+    
+    window.showPostJob = () => {
+      document.getElementById('postJobModal').classList.remove('hidden');
+    };
+    
+    window.closePostJob = () => {
+      document.getElementById('postJobModal').classList.add('hidden');
+    };
+    
+    window.submitJob = async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('j-title').value;
+      const desc = document.getElementById('j-desc').value;
+      const budget = parseInt(document.getElementById('j-budget').value);
+      const deadline = document.getElementById('j-deadline').value;
+      await addDoc(collection(db, "jobs"), {
+        title, description: desc, budget, deadline,
+        clientId: currentUser.uid,
+        clientName: userData.name,
+        tags: [],
+        createdAt: new Date().toISOString(),
+        status: "open"
+      });
+      closePostJob();
+      showToast("Job posted successfully!");
+      e.target.reset();
+    };
+    
+    window.logout = async () => {
+      await signOut(auth);
+      window.location.href = "registration.html";
+    };
+    
+    window.setDashTab = (tab) => {
+      currentTab = tab;
       document.querySelectorAll('.dash-content').forEach(c => c.classList.add('hidden'));
       document.getElementById(`dash-${tab}`).classList.remove('hidden');
+      document.querySelectorAll('.dash-tab').forEach(t => {
+        t.classList.toggle('bg-accent/10', t.dataset.tab === tab);
+        t.classList.toggle('text-accent', t.dataset.tab === tab);
+        t.classList.toggle('text-slate', t.dataset.tab !== tab);
+      });
+      if (tab === 'jobs') renderJobs();
+      if (tab === 'tasks') renderTasks();
+      if (tab === 'mytools') renderMyTools();
+      if (tab === 'tools') renderTools('all');
+      lucide.createIcons();
+    };
+    
+    window.filterTools = (cat) => {
+      renderTools(cat);
+    };
+    
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      toastMsg.textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
     }
-    window.setDashTab = setDashTab;
-
-    function logout() { auth.signOut(); }
-    window.logout = logout;
-
-    lucide.createIcons();
+    
+    // Initialize
+    checkAuth();
+    window.setDashTab('overview');
   </script>
+  <style>
+    body { font-family: 'DM Sans', sans-serif; background: #0a0e1a; color: #ccd6f6; }
+    .bg-grid { background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0); background-size: 40px 40px; }
+    .card-hover { transition: transform 0.3s, box-shadow 0.3s; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,229,160,0.12); }
+    .glow { box-shadow: 0 0 40px rgba(0,229,160,0.15); }
+    .tag { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 500; background: rgba(255,255,255,0.05); color: #8892b0; }
+    .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.7); z-index: 100; display:flex; align-items:center; justify-content:center; }
+    input:focus, textarea:focus, select:focus { outline: none; box-shadow: 0 0 0 2px #00e5a0; }
+  </style>
+</head>
+<body class="bg-midnight text-light bg-grid">
+  <div class="app-wrapper">
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-midnight/90 backdrop-blur-md border-b border-white/5">
+      <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="window.location.reload()">
+          <div class="w-8 h-8 rounded-lg bg-accent flex items-center justify-center"><i data-lucide="zap" style="width:18px;height:18px;color:#0a0e1a;"></i></div>
+          <span class="font-heading font-bold text-lg">SmartHustle</span>
+        </div>
+        <div class="hidden md:flex items-center gap-4">
+          <span id="userName" class="text-sm text-light"></span>
+          <button onclick="logout()" class="px-4 py-2 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition font-medium">Logout</button>
+        </div>
+      </div>
+    </nav>
+    
+    <div class="flex h-[calc(100%-4rem)] pt-16">
+      <aside id="dashSidebar" class="hidden md:flex flex-col w-56 bg-surface border-r border-white/5 p-4 gap-1 shrink-0">
+        <button onclick="setDashTab('overview')" class="dash-tab text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate" data-tab="overview"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> Overview</button>
+        <button onclick="setDashTab('jobs')" class="dash-tab text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate" data-tab="jobs"><i data-lucide="briefcase" style="width:16px;height:16px;"></i> Available Jobs</button>
+        <button onclick="setDashTab('tasks')" class="dash-tab text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate" data-tab="tasks"><i data-lucide="clock" style="width:16px;height:16px;"></i> Quick Tasks</button>
+        <button onclick="setDashTab('tools')" class="dash-tab text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate" data-tab="tools"><i data-lucide="wrench" style="width:16px;height:16px;"></i> Tools Marketplace</button>
+        <button onclick="setDashTab('mytools')" class="dash-tab text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate" data-tab="mytools"><i data-lucide="package" style="width:16px;height:16px;"></i> My Tools</button>
+        <button onclick="setDashTab('earnings')" class="dash-tab text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate" data-tab="earnings"><i data-lucide="wallet" style="width:16px;height:16px;"></i> Earnings</button>
+        <div class="mt-auto pt-4 border-t border-white/5"><button onclick="showPostJob()" class="w-full px-3 py-2.5 rounded-lg bg-accent/10 text-accent text-sm font-medium hover:bg-accent/20 transition flex items-center gap-2"><i data-lucide="plus" style="width:16px;height:16px;"></i> Post a Job</button></div>
+      </aside>
+      
+      <div class="flex-1 p-4 md:p-8 overflow-auto">
+        <div id="dash-overview" class="dash-content">
+          <h2 class="font-heading text-xl font-bold mb-6">Welcome back, <span id="userNameWelcome"></span>! 👋</h2>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-surface rounded-xl p-5 border border-white/5"><p class="text-slate text-xs mb-1">Total Earnings</p><p id="totalEarnings" class="font-heading text-2xl font-bold text-accent">KES 0</p></div>
+            <div class="bg-surface rounded-xl p-5 border border-white/5"><p class="text-slate text-xs mb-1">Active Jobs</p><p id="activeJobs" class="font-heading text-2xl font-bold">0</p></div>
+            <div class="bg-surface rounded-xl p-5 border border-white/5"><p class="text-slate text-xs mb-1">Tools Owned</p><p id="toolsOwned" class="font-heading text-2xl font-bold">0</p></div>
+            <div class="bg-surface rounded-xl p-5 border border-white/5"><p class="text-slate text-xs mb-1">Rating</p><p id="rating" class="font-heading text-2xl font-bold text-yellow-400">—</p></div>
+          </div>
+          <div class="bg-surface rounded-xl p-6 border border-accent/20 glow"><div class="flex items-center gap-3 mb-2"><i data-lucide="sparkles" style="width:20px;height:20px;color:#00e5a0;"></i><h3 class="font-heading font-semibold">Boost Your Earnings with AI Tools 🔥</h3></div><p class="text-slate text-sm mb-4">Unlock powerful tools to work faster and earn more.</p><button onclick="setDashTab('tools')" class="px-5 py-2 rounded-lg bg-accent text-midnight font-semibold text-sm hover:bg-accentDim transition">Browse Tools</button></div>
+        </div>
+        
+        <div id="dash-jobs" class="dash-content hidden"><h2 class="font-heading text-xl font-bold mb-6">Available Jobs</h2><div id="jobsList" class="space-y-4"></div></div>
+        <div id="dash-tasks" class="dash-content hidden"><h2 class="font-heading text-xl font-bold mb-6">Quick Tasks</h2><div id="tasksList" class="space-y-3"></div></div>
+        <div id="dash-tools" class="dash-content hidden"><h2 class="font-heading text-xl font-bold mb-6">Tools Marketplace</h2><div class="flex flex-wrap gap-2 justify-center mb-8"><button onclick="filterTools('all')" class="tool-filter px-4 py-2 rounded-full text-sm bg-accent text-midnight font-medium" data-filter="all">All</button><button onclick="filterTools('writing')" class="tool-filter px-4 py-2 rounded-full text-sm bg-surface text-slate border border-white/10 hover:border-accent/40 transition" data-filter="writing">Writing</button><button onclick="filterTools('content')" class="tool-filter px-4 py-2 rounded-full text-sm bg-surface text-slate border border-white/10 hover:border-accent/40 transition" data-filter="content">Content</button><button onclick="filterTools('business')" class="tool-filter px-4 py-2 rounded-full text-sm bg-surface text-slate border border-white/10 hover:border-accent/40 transition" data-filter="business">Business</button></div><div id="toolsGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"></div></div>
+        <div id="dash-mytools" class="dash-content hidden"><h2 class="font-heading text-xl font-bold mb-6">My Tools</h2><p id="myToolsMsg" class="text-slate text-sm">You haven't purchased any tools yet. <a href="#" onclick="setDashTab('tools');return false" class="text-accent hover:underline">Browse the marketplace</a>.</p><div id="myToolsList" class="grid sm:grid-cols-2 gap-4 mt-4"></div></div>
+        <div id="dash-earnings" class="dash-content hidden"><h2 class="font-heading text-xl font-bold mb-6">Earnings & Wallet</h2><div class="bg-surface rounded-xl p-6 border border-white/5 mb-6"><p class="text-slate text-xs mb-1">Available Balance</p><p id="earningsBalance" class="font-heading text-3xl font-bold text-accent">KES 0.00</p><button class="mt-4 px-5 py-2 rounded-lg bg-accent/10 text-accent font-medium text-sm hover:bg-accent/20 transition">Withdraw via M-Pesa</button></div><p class="text-slate text-sm">Complete jobs to start earning. Your payments are secured in escrow until work is approved.</p></div>
+      </div>
+    </div>
+    
+    <!-- Modals -->
+    <div id="toolModal" class="modal-overlay hidden" onclick="if(event.target===this)closeToolModal()"><div class="bg-surface rounded-2xl p-6 max-w-md w-full mx-4 border border-white/10"><div class="flex justify-between items-start mb-4"><h3 id="toolModalTitle" class="font-heading text-lg font-bold"></h3><button onclick="closeToolModal()" class="text-slate hover:text-light"><i data-lucide="x" style="width:20px;height:20px;"></i></button></div><p id="toolModalDesc" class="text-slate text-sm mb-4"></p><div class="bg-midnight rounded-xl p-4 mb-4 border border-white/5"><p class="text-xs text-slate mb-2">Demo Preview:</p><p id="toolModalDemoText" class="text-sm text-light"></p></div><div class="flex justify-between items-center"><span id="toolModalPrice" class="font-heading font-bold text-accent text-lg"></span><button id="toolModalUnlock" onclick="unlockTool()" class="px-6 py-2.5 rounded-xl bg-accent text-midnight font-bold text-sm hover:bg-accentDim transition">Unlock Tool</button></div></div></div>
+    
+    <div id="postJobModal" class="modal-overlay hidden" onclick="if(event.target===this)closePostJob()"><div class="bg-surface rounded-2xl p-6 max-w-lg w-full mx-4 border border-white/10"><div class="flex justify-between items-start mb-4"><h3 class="font-heading text-lg font-bold">Post a Job</h3><button onclick="closePostJob()" class="text-slate hover:text-light"><i data-lucide="x" style="width:20px;height:20px;"></i></button></div><form onsubmit="submitJob(event)" class="space-y-4"><div><label class="block text-sm font-medium mb-1">Job Title</label><input id="j-title" type="text" required class="w-full px-4 py-3 rounded-xl bg-midnight border border-white/10 text-light"></div><div><label class="block text-sm font-medium mb-1">Description</label><textarea id="j-desc" rows="3" required class="w-full px-4 py-3 rounded-xl bg-midnight border border-white/10 text-light"></textarea></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium mb-1">Budget (KES)</label><input id="j-budget" type="number" required class="w-full px-4 py-3 rounded-xl bg-midnight border border-white/10 text-light"></div><div><label class="block text-sm font-medium mb-1">Deadline</label><input id="j-deadline" type="date" required class="w-full px-4 py-3 rounded-xl bg-midnight border border-white/10 text-light"></div></div><button type="submit" class="w-full py-3 rounded-xl bg-accent text-midnight font-bold hover:bg-accentDim transition">Publish Job</button></form></div></div>
+    
+    <div id="applyJobModal" class="modal-overlay hidden" onclick="if(event.target===this)closeApplyJob()"><div class="bg-surface rounded-2xl p-6 max-w-lg w-full mx-4 border border-white/10"><div class="flex justify-between items-start mb-4"><h3 class="font-heading text-lg font-bold">Apply for Job</h3><button onclick="closeApplyJob()" class="text-slate hover:text-light"><i data-lucide="x" style="width:20px;height:20px;"></i></button></div><p id="applyJobTitle" class="text-accent text-sm mb-4"></p><form onsubmit="submitApplication(event)" class="space-y-4"><div><label class="block text-sm font-medium mb-1">Your Proposal</label><textarea id="a-proposal" rows="4" required class="w-full px-4 py-3 rounded-xl bg-midnight border border-white/10 text-light" placeholder="Why are you the best fit?"></textarea></div><div><label class="block text-sm font-medium mb-1">Your Price (KES)</label><input id="a-price" type="number" required class="w-full px-4 py-3 rounded-xl bg-midnight border border-white/10 text-light" placeholder="4500"></div><button type="submit" class="w-full py-3 rounded-xl bg-accent text-midnight font-bold hover:bg-accentDim transition">Submit Application</button></form></div></div>
+    
+    <div id="toast" class="fixed top-20 right-4 z-50 hidden"><div class="bg-surface border border-accent/30 rounded-xl px-5 py-3 shadow-lg flex items-center gap-3"><i data-lucide="check-circle" style="width:18px;height:18px;color:#00e5a0;"></i><span id="toastMsg" class="text-sm"></span></div></div>
+  </div>
+  <script>lucide.createIcons();</script>
 </body>
 </html>
