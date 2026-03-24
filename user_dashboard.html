@@ -10,7 +10,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
   <style>
-    /* same as original styling */
     body { background: #0a0e1a; font-family: 'DM Sans', sans-serif; color: #ccd6f6; }
     .bg-surface { background: #131829; }
     .text-accent { color: #00e5a0; }
@@ -19,11 +18,13 @@
     .card-hover:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,229,160,0.12); }
     .screen { display: none; }
     .screen.active { display: block; }
+    .status-badge { padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+    .status-active { background: #00e5a0; color: #0a0e1a; }
+    .status-unverified { background: #f59e0b; color: #0a0e1a; }
   </style>
 </head>
 <body>
   <div class="app-wrapper bg-grid" id="app">
-    <!-- Navigation (simplified) -->
     <nav class="fixed top-0 left-0 right-0 z-50 bg-midnight/90 backdrop-blur-md border-b border-white/5">
       <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <div class="flex items-center gap-2 cursor-pointer" onclick="navigateTo('landing')">
@@ -36,7 +37,6 @@
       </div>
     </nav>
 
-    <!-- Dashboard content (same as before but with status check) -->
     <div class="flex h-[calc(100%-4rem)] pt-16">
       <aside class="hidden md:flex flex-col w-56 bg-surface border-r border-white/5 p-4 gap-1 shrink-0">
         <button onclick="setDashTab('overview')" class="dash-tab text-left px-3 py-2.5 rounded-lg text-sm hover:bg-white/5 transition flex items-center gap-3 text-slate" data-tab="overview"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> Overview</button>
@@ -49,12 +49,10 @@
         </div>
       </aside>
       <div class="flex-1 p-4 md:p-8 overflow-auto">
-        <!-- Status banner for unverified users -->
         <div id="unverifiedBanner" class="mb-6 bg-yellow-500/20 border border-yellow-500 rounded-xl p-4 text-yellow-300 text-sm hidden">
           <i data-lucide="alert-triangle" class="inline mr-2 w-4 h-4"></i> Your account is pending verification. You cannot apply for jobs until an admin activates your account.
         </div>
 
-        <!-- Overview tab -->
         <div id="dash-overview" class="dash-content">
           <h2 class="font-heading text-xl font-bold mb-6">Welcome back, <span id="userName"></span>! 👋</h2>
           <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -66,26 +64,22 @@
           <div class="bg-surface rounded-xl p-6 border border-accent/20 glow"><div class="flex items-center gap-3 mb-2"><i data-lucide="sparkles"></i><h3 class="font-heading font-semibold">Buy Tools to Earn Faster 🔥</h3></div><p class="text-slate text-sm mb-4">Unlock AI tools like the Proposal Generator to win more jobs.</p><button onclick="window.location.href='tools.html'" class="px-5 py-2 rounded-lg bg-accent text-midnight font-semibold text-sm hover:bg-accentDim transition">Browse Tools</button></div>
         </div>
 
-        <!-- Jobs tab (apply button disabled if unverified) -->
         <div id="dash-jobs" class="dash-content hidden">
           <h2 class="font-heading text-xl font-bold mb-6">Available Jobs</h2>
           <div id="dashJobsList" class="space-y-4"></div>
         </div>
 
-        <!-- Tasks tab (same) -->
         <div id="dash-tasks" class="dash-content hidden">
           <h2 class="font-heading text-xl font-bold mb-6">Quick Tasks</h2>
           <div id="dashTasksList" class="space-y-3"></div>
         </div>
 
-        <!-- My Tools tab -->
         <div id="dash-mytools" class="dash-content hidden">
           <h2 class="font-heading text-xl font-bold mb-6">My Tools</h2>
           <p class="text-slate text-sm" id="myToolsMsg">You haven't purchased any tools yet. <a href="#" onclick="window.location.href='tools.html'" class="text-accent hover:underline">Browse the marketplace</a>.</p>
           <div id="myToolsList" class="grid sm:grid-cols-2 gap-4 mt-4"></div>
         </div>
 
-        <!-- Earnings tab -->
         <div id="dash-earnings" class="dash-content hidden">
           <h2 class="font-heading text-xl font-bold mb-6">Earnings & Wallet</h2>
           <div class="bg-surface rounded-xl p-6 border border-white/5 mb-6"><p class="text-slate text-xs mb-1">Available Balance</p><p class="font-heading text-3xl font-bold text-accent" id="balance">KES 0.00</p><button class="mt-4 px-5 py-2 rounded-lg bg-accent/10 text-accent font-medium text-sm hover:bg-accent/20 transition">Withdraw via M-Pesa</button></div>
@@ -110,27 +104,42 @@
     const db = firebase.firestore();
 
     let currentUserData = null;
-    let userStatus = null; // 'unverified' or 'active'
+    let userStatus = null;
 
-    // Redirect if not logged in
     auth.onAuthStateChanged(async (user) => {
       if (!user) {
         window.location.href = 'registration.html';
         return;
       }
-      const doc = await db.collection('users').doc(user.uid).get();
-      if (!doc.exists) {
+
+      let retries = 0;
+      const maxRetries = 3;
+      let userDoc = null;
+
+      while (retries < maxRetries) {
+        const doc = await db.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+          userDoc = doc;
+          break;
+        }
+        retries++;
+        console.log(`User document not found, retry ${retries}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      if (!userDoc) {
+        console.error('User document still missing after retries');
         await auth.signOut();
         window.location.href = 'registration.html';
         return;
       }
-      currentUserData = doc.data();
+
+      currentUserData = userDoc.data();
       userStatus = currentUserData.status;
       if (currentUserData.role === 'admin') {
         window.location.href = 'admin_dashboard.html';
         return;
       }
-      // Show banner if unverified
       if (userStatus !== 'active') {
         document.getElementById('unverifiedBanner').classList.remove('hidden');
       }
@@ -229,7 +238,6 @@
         alert('Your account is not yet verified. Please contact admin.');
         return;
       }
-      // We'll open a modal (simplified: prompt)
       const proposal = prompt('Write your proposal:');
       const price = prompt('Your price (KES):');
       if (proposal && price) {
@@ -254,7 +262,6 @@
     function logout() { auth.signOut(); }
     window.logout = logout;
 
-    // Initialize Lucide
     lucide.createIcons();
   </script>
 </body>
